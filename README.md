@@ -23,21 +23,19 @@ OpenAI integration for Lilka ESP32 development board, providing interactive AI c
 
 ### First Time Setup
 
-1. **Build and Upload**
+1. **Configure WiFi in Keira OS**
 
-```bash
-# Build and upload using PlatformIO
-pio run --target upload
-```
+   - This firmware is designed to be loaded from Keira OS
+   - WiFi credentials must be configured in Keira first
+   - The app will automatically connect to WiFi during boot
 
-2. **Configure via Web Interface**
+2. **Configure OpenAI API Key**
 
-   - Power on Lilka board
-   - From main menu, select **Settings** → **Settings**
-   - Lilka will create WiFi access point "LilkaAI-AP"
-   - Connect your device to this WiFi (password: `lilka2026`)
-   - Open browser and navigate to `http://192.168.4.1`
-   - Enter your WiFi credentials and OpenAI API key
+   - Load the firmware from Keira OS
+   - WiFi will connect automatically on startup
+   - From main menu, select **Settings** → **Web Settings**
+   - Open browser on same WiFi network and navigate to the displayed IP address
+   - Enter your OpenAI API key and preferred model
    - Click "Save Settings"
    - Board will restart automatically
 
@@ -82,14 +80,16 @@ Use any serial terminal to send messages and receive AI responses.
 ### Settings Menu
 
 **Settings (Web Config)**:
-- Opens WiFi access point for web-based configuration
-- Configure: WiFi SSID, WiFi Password, OpenAI API Key, AI Model
+- Opens web server on existing WiFi connection
+- Configure: OpenAI API Key, AI Model
+- Access via browser on same network as Lilka
+- WiFi is configured in Keira OS (not in this app)
 - Requires device restart after saving
 
 **Quick settings**:
 - **OpenAI Model**: Change AI model without full configuration
   - Default: gpt-4.1-nano
-  - Other options: gpt-4.1, gpt-4o-mini, gpt-5-mini, etc.
+  - Other options: gpt-4o-mini, gpt-4o, gpt-5-mini, etc.
 - Changes take effect immediately
 
 ## Project Structure
@@ -100,30 +100,44 @@ lilka-ai/
 │   ├── config.h              # Constants and screen dimensions
 │   ├── openai_client.h       # OpenAI API client
 │   ├── ui_handler.h          # UI management
-│   ├── serial_handler.h      # RS-232 serial communication
-│   ├── settings.h            # NVS settings storage
-│   └── config_server.h       # Web configuration server
+│   ├── serial_handler.h      # RS-232 serial commun (OpenAI only)
+│   ├── config_server.h       # Web configuration server
+│   └── wifi_config.h         # Keira WiFi credential loader
 ├── src/
 │   ├── main.cpp              # Main application and menu logic
 │   ├── openai_client.cpp     # OpenAI API implementation
 │   ├── ui_handler.cpp        # UI screens and dialogs
 │   ├── serial_handler.cpp    # Serial mode implementation
-│   ├── settings.cpp          # Settings persistence
-│   └── config_server.cpp     # Web server for configuration
+│   ├── settings.cpp          # Settings persistence (OpenAI only)
+│   ├── config_server.cpp     # Web server for configuration
+│   └── wifi_config.cpp       # Keira WiFi NVS reader
 ├── platformio.ini            # PlatformIO configuration
+└── README.md o.ini            # PlatformIO configuration
 └── README.md                # This file
 ```
 
 ## Configuration
 
-All configuration is done through the web interface. No code changes required!
+### WiFi Configuration
 
-### Web Configuration Fields
+WiFi credentials are managed by Keira OS. This firmware:
+- Reads WiFi settings from Keira's NVS storage during boot
+- Automatically connects to WiFi on startup
+- Shows error alert if WiFi is not configured or connection fails
+- You must configure WiFi in Keira before using this app
 
-- **WiFi SSID**: Your WiFi network name
-- **WiFi Password**: Your WiFi password
+### OpenAI Configuration
+
+OpenAI settings are configured through the web interface:
+
 - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-- **AI Model**: OpenAI model to use (e.g., gpt-4o-mini, gpt-4o)
+- **AI Model**: OpenAI model to use (e.g., gpt-4.1-nano, gpt-4o-mini, gpt-4o)
+
+To access web config:
+1. Ensure Lilka is connected to WiFi (during boot)
+2. Navigate to Settings → Web Settings from main menu
+3. Note the IP address shown on screen
+4. Open browser on same network and enter the IP address
 
 ### Get OpenAI API Key
 
@@ -172,10 +186,11 @@ Long AI responses can be scrolled using UP/DOWN buttons to read all content.
 All settings are stored in ESP32 non-volatile storage and persist across reboots.
 
 ## Troubleshooting
-
-### WiFi Connection Issues
-
-- Verify correct SSID and password in web config
+**Configure WiFi in Keira OS first** - this app reads credentials from Keira's storage
+- Verify WiFi is working in Keira OS before loading this firmware
+- Check 2.4GHz network (ESP32 doesn't support 5GHz)
+- Ensure WiFi signal strength is adequate
+- If no credentials found, restart in Keira and configure WiFi therenfig
 - Check 2.4GHz network (ESP32 doesn't support 5GHz)
 - Ensure WiFi signal strength is adequate
 - Check router allows new device connections
@@ -189,9 +204,12 @@ All settings are stored in ESP32 non-volatile storage and persist across reboots
 
 ### Web Configuration Issues
 
-- If can't connect to LilkaAI-AP, restart Lilka
-- Use exact password: `lilka2026`
+- Ensure your device is on the same WiFi network as Lilka
+- Verify WiFi connection succeeded during boot
+- Use the exact IP address shown on Lilka's screen
 - Try different browser if page doesn't load
+- Check firewall/router settings allow local network access
+- Press B to cancel web config mode
 - Wait for full restart after saving settings
 
 ### Serial Mode Issues

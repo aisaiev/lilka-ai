@@ -7,8 +7,9 @@ This project provides OpenAI GPT integration for Lilka ESP32 dev board, enabling
 - **Dual Interface Modes**: 
   - On-device chat mode with virtual keyboard and scrollable response display
   - RS-232 serial mode for terminal-based interaction
-- **Web Configuration Portal**: WiFi access point with web interface for easy setup (no code changes needed)
-- **Persistent Settings**: NVS (Non-Volatile Storage) for WiFi credentials, API keys, and model preferences
+- **Keira WiFi Integration**: Automatically reads WiFi credentials from Keira OS NVS storage
+- **Web Configuration Portal**: WiFi access point with web interface for OpenAI API configuration
+- **Persistent Settings**: NVS storage for OpenAI API keys and model preferences
 - **Quick Settings**: On-device model switching without full reconfiguration
 - **Menu System**: Multi-level navigation with proper back handling following Keira OS patterns
 - **Error Handling**: Comprehensive error messages parsed from OpenAI API responses
@@ -23,22 +24,25 @@ This project provides OpenAI GPT integration for Lilka ESP32 dev board, enabling
 - **Build System**: PlatformIO
 
 ## Architecture
-- **main.cpp**: Application entry, menu system, mode selection, WiFi management
+- **main.cpp**: Application entry, menu system, mode selection, Keira WiFi credential loading
+- **wifi_config**: Reads WiFi credentials from Keira's NVS storage (namespace "kwifi")
 - **openai_client**: HTTP client for OpenAI API with conversation history tracking
 - **ui_handler**: Display management with canvas-based rendering for flicker-free updates
 - **serial_handler**: RS-232 communication handler for terminal mode
-- **settings**: NVS-based persistent configuration storage
-- **config_server**: Async web server for configuration portal
+- **settings**: NVS-based persistent configuration storage (OpenAI API key and model only)
+- **config_server**: Async web server for OpenAI configuration portal
 
 ## Requirements
 - Lilka ESP32 dev board (v2)
+- Keira OS with configured WiFi credentials
 - OpenAI API Key with active credits
 - (Optional) RS-232 Serial Interface for serial mode
 - (Optional) USB to Serial Adapter for development/debugging
 
 ## Configuration
-- Web-based setup via WiFi access point (SSID: LilkaAI-AP, Password: lilka2026)
-- Settings stored in NVS: WiFi SSID, WiFi Password, OpenAI API Key, AI Model
+- WiFi: Automatically loaded from Keira OS NVS storage (namespace "kwifi")
+- OpenAI: Web-based setup via WiFi
+- Settings stored in separate NVS namespace: OpenAI API Key, AI Model
 - Quick settings for runtime model changes
 - All configuration persists across reboots
 

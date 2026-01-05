@@ -6,20 +6,6 @@ void Settings::begin() {
     preferences.begin("lilka-ai", false);
 }
 
-String Settings::getWifiSSID() {
-    if (!preferences.isKey("wifi_ssid")) {
-        return "";
-    }
-    return preferences.getString("wifi_ssid", "");
-}
-
-String Settings::getWifiPassword() {
-    if (!preferences.isKey("wifi_pass")) {
-        return "";
-    }
-    return preferences.getString("wifi_pass", "");
-}
-
 String Settings::getOpenAIKey() {
     if (!preferences.isKey("openai_key")) {
         return "";
@@ -36,14 +22,6 @@ String Settings::getOpenAIModel() {
 
 bool Settings::isConfigured() {
     return preferences.getBool("configured", false);
-}
-
-void Settings::setWifiSSID(const String& ssid) {
-    preferences.putString("wifi_ssid", ssid);
-}
-
-void Settings::setWifiPassword(const String& password) {
-    preferences.putString("wifi_pass", password);
 }
 
 void Settings::setOpenAIKey(const String& key) {

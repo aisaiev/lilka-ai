@@ -10,15 +10,11 @@ public:
     void begin();
     
     // Getters
-    String getWifiSSID();
-    String getWifiPassword();
     String getOpenAIKey();
     String getOpenAIModel();
     bool isConfigured();
     
     // Setters
-    void setWifiSSID(const String& ssid);
-    void setWifiPassword(const String& password);
     void setOpenAIKey(const String& key);
     void setOpenAIModel(const String& model);
     void setConfigured(bool configured);

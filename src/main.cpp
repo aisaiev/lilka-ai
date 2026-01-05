@@ -6,6 +6,7 @@
 #include "serial_handler.h"
 #include "settings.h"
 #include "config_server.h"
+#include "wifi_config.h"
 
 // Global objects
 OpenAIClient* openaiClient;
@@ -22,20 +23,18 @@ enum Mode {
 };
 
 Mode selectedMode = MODE_NONE;
+bool wifiConnected = false;
 
 // Function declarations
-void connectWiFi();
 void handleUserInput();
 void runSerialMode();
 void runSettingsMode();
-void runWebConfigMode();
+bool runWebConfigMode();
 void runQuickSettingsMode();
 void editOpenAIModel();
 
 void setup() {
-    Serial.begin(115200);
     lilka::begin();
-    delay(1000);
     
     Serial.println("Lilka AI");
     Serial.println("=============================");
@@ -49,12 +48,12 @@ void setup() {
     
     canvas.setTextSize(3);
     canvas.setTextColor(canvas.color565(150, 200, 255));
-    canvas.getTextBounds("Лілка AI", 0, 0, &x1, &y1, &w, &h);
+    canvas.getTextBounds("Lilka AI", 0, 0, &x1, &y1, &w, &h);
     canvas.setCursor((canvas.width() - w) / 2, canvas.height() / 2 + h / 2);
-    canvas.print("Лілка AI");
+    canvas.print("Lilka AI");
     
     lilka::display.drawCanvas(&canvas);
-    delay(2000);
+    delay(1000);
     
     // Initialize settings
     settings = new Settings();
@@ -63,11 +62,18 @@ void setup() {
     // Initialize UI
     ui = new UIHandler();
     
+    // Connect to WiFi during boot
+    String wifiSSID, wifiPassword;
+    if (loadWiFiCredentials(wifiSSID, wifiPassword)) {
+        Serial.printf("Found WiFi credentials for: %s\n", wifiSSID.c_str());
+        wifiConnected = connectToWiFi(wifiSSID, wifiPassword);
+    }
+    
     // Main menu loop
     bool menuActive = true;
     while (menuActive) {
         // Create mode selection menu
-        lilka::Menu menu("Лілка AI");
+        lilka::Menu menu("Lilka AI");
         menu.addItem("Chat mode", NULL, lilka::colors::Arylide_yellow);
         menu.addItem("Serial mode", NULL, lilka::colors::Arylide_yellow);
         menu.addItem("Settings", NULL, lilka::colors::Orange);
@@ -88,20 +94,25 @@ void setup() {
             continue;
         }
         
-        // Check if settings are configured before connecting
-        if (!settings->isConfigured() || settings->getWifiSSID().isEmpty() || 
-            settings->getWifiPassword().isEmpty() || settings->getOpenAIKey().isEmpty()) {
-            lilka::Alert alert("Settings Required", "Please configure WiFi and OpenAI credentials in Settings menu.");
+        // Check WiFi connection status
+        if (!wifiConnected) {
+            lilka::Alert alert("WiFi Error", "No WiFi connection.\n\nPlease configure WiFi in Keira and restart.\n\nPress A to return.");
             alert.draw(&lilka::display);
             while (!alert.isFinished()) {
                 alert.update();
             }
-            // Return to menu instead of restarting
             continue;
         }
         
-        // Connect to WiFi using stored credentials
-        connectWiFi();
+        // Check if OpenAI API key is configured
+        if (settings->getOpenAIKey().isEmpty()) {
+            lilka::Alert alert("Settings Required", "Please configure OpenAI API Key in Settings menu.");
+            alert.draw(&lilka::display);
+            while (!alert.isFinished()) {
+                alert.update();
+            }
+            continue;
+        }
         
         // Initialize OpenAI client with stored key
         String apiKey = settings->getOpenAIKey();
@@ -125,100 +136,6 @@ void loop() {
         handleUserInput();
     } else if (selectedMode == MODE_SERIAL) {
         serialHandler->loop();
-    }
-    delay(10);
-}
-
-void connectWiFi() {
-    // Get credentials from settings
-    String wifiSSID = settings->getWifiSSID();
-    String wifiPassword = settings->getWifiPassword();
-    
-    // Display connecting status
-    lilka::Canvas canvas;
-    canvas.fillScreen(0);
-    
-    int16_t x1, y1;
-    uint16_t w, h;
-    
-    canvas.setTextSize(2);
-    canvas.setTextColor(canvas.color565(100, 200, 255));
-    canvas.getTextBounds("WiFi", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 60);
-    canvas.print("WiFi");
-    
-    canvas.setTextSize(1);
-    canvas.setTextColor(canvas.color565(200, 200, 200));
-    canvas.getTextBounds("Connecting to...", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 100);
-    canvas.print("Connecting to...");
-    
-    canvas.setTextColor(canvas.color565(255, 255, 255));
-    canvas.getTextBounds(wifiSSID.c_str(), 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 120);
-    canvas.print(wifiSSID);
-    
-    lilka::display.drawCanvas(&canvas);
-    
-    WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
-    
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-        delay(500);
-        attempts++;
-    }
-    
-    // Display result
-    canvas.fillScreen(0);
-    
-    if (WiFi.status() == WL_CONNECTED) {
-        // Success screen
-        canvas.setTextSize(2);
-        canvas.setTextColor(canvas.color565(100, 255, 100));
-        canvas.getTextBounds("Connected!", 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 60);
-        canvas.print("Connected!");
-        
-        canvas.setTextSize(1);
-        canvas.setTextColor(canvas.color565(200, 200, 200));
-        canvas.getTextBounds("Network:", 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 100);
-        canvas.print("Network:");
-        
-        canvas.setTextColor(canvas.color565(255, 255, 255));
-        canvas.getTextBounds(wifiSSID.c_str(), 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 120);
-        canvas.print(wifiSSID);
-        
-        canvas.setTextColor(canvas.color565(200, 200, 200));
-        canvas.getTextBounds("IP Address:", 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 150);
-        canvas.print("IP Address:");
-        
-        String ipAddr = WiFi.localIP().toString();
-        canvas.setTextColor(canvas.color565(255, 255, 100));
-        canvas.getTextBounds(ipAddr.c_str(), 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 170);
-        canvas.print(ipAddr);
-        
-        lilka::display.drawCanvas(&canvas);
-        delay(2000);
-    } else {
-        // Failure screen
-        canvas.setTextSize(2);
-        canvas.setTextColor(canvas.color565(255, 100, 100));
-        canvas.getTextBounds("Failed!", 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 80);
-        canvas.print("Failed!");
-        
-        canvas.setTextSize(1);
-        canvas.setTextColor(canvas.color565(200, 200, 200));
-        canvas.getTextBounds("Check credentials", 0, 0, &x1, &y1, &w, &h);
-        canvas.setCursor((canvas.width() - w) / 2, 130);
-        canvas.print("Check credentials");
-        
-        lilka::display.drawCanvas(&canvas);
-        delay(3000);
     }
 }
 
@@ -298,8 +215,8 @@ void runSettingsMode() {
     while (1) {
         // Create settings submenu
         lilka::Menu settingsMenu("Settings");
-        settingsMenu.addItem("Settings", NULL, lilka::colors::Arylide_yellow);
-        settingsMenu.addItem("Quick settings", NULL, lilka::colors::Arylide_yellow);
+        settingsMenu.addItem("Web Settings", NULL, lilka::colors::Arylide_yellow);
+        settingsMenu.addItem("Quick Settings", NULL, lilka::colors::Arylide_yellow);
         settingsMenu.addItem("Back", NULL, lilka::colors::Dark_sea_green);
         
         // Run menu until selection
@@ -314,8 +231,12 @@ void runSettingsMode() {
         int16_t cursor = settingsMenu.getCursor();
         if (cursor == 0) {
             // Web Config
-            runWebConfigMode();
-            ESP.restart();
+            bool settingsSaved = runWebConfigMode();
+            if (settingsSaved) {
+                ESP.restart();
+            }
+            // If cancelled (B pressed), return to main menu
+            break;
         } else if (cursor == 1) {
             // Quick settings
             runQuickSettingsMode();
@@ -327,12 +248,22 @@ void runSettingsMode() {
     }
 }
 
-void runWebConfigMode() {
-    // Start WiFi AP
+bool runWebConfigMode() {
+    // Check if WiFi is connected
+    if (!wifiConnected || WiFi.status() != WL_CONNECTED) {
+        lilka::Alert alert("WiFi Error", "Not connected to WiFi.\n\nPlease configure WiFi in Keira and restart.\n\nPress A to return.");
+        alert.draw(&lilka::display);
+        while (!alert.isFinished()) {
+            alert.update();
+        }
+        return false;
+    }
+    
+    // Start web server on existing WiFi connection
     ConfigServer configServer(settings);
     configServer.start();
     
-    IPAddress IP = WiFi.softAPIP();
+    IPAddress IP = WiFi.localIP();
     
     // Display configuration screen
     lilka::Canvas canvas;
@@ -344,53 +275,45 @@ void runWebConfigMode() {
     // Title
     canvas.setTextSize(2);
     canvas.setTextColor(canvas.color565(255, 150, 50));
-    canvas.getTextBounds("Settings", 0, 0, &x1, &y1, &w, &h);
+    canvas.getTextBounds("Web Settings", 0, 0, &x1, &y1, &w, &h);
     canvas.setCursor((canvas.width() - w) / 2, 40);
-    canvas.print("Settings");
+    canvas.print("Web Settings");
     
     // Instructions
     canvas.setTextSize(1);
     canvas.setTextColor(canvas.color565(200, 200, 200));
-    canvas.getTextBounds("Connect to WiFi:", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 80);
-    canvas.print("Connect to WiFi:");
+    canvas.getTextBounds("Open browser on", 0, 0, &x1, &y1, &w, &h);
+    canvas.setCursor((canvas.width() - w) / 2, 90);
+    canvas.print("Open browser on");
     
-    canvas.setTextColor(canvas.color565(100, 255, 100));
-    canvas.getTextBounds("LilkaAI-AP", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 100);
-    canvas.print("LilkaAI-AP");
-    
-    canvas.setTextColor(canvas.color565(200, 200, 200));
-    canvas.getTextBounds("Password:", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 130);
-    canvas.print("Password:");
-    
-    canvas.setTextColor(canvas.color565(100, 255, 100));
-    canvas.getTextBounds("lilka2026", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 150);
-    canvas.print("lilka2026");
-    
-    canvas.setTextColor(canvas.color565(200, 200, 200));
-    canvas.getTextBounds("Open browser:", 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 180);
-    canvas.print("Open browser:");
+    canvas.getTextBounds("same WiFi network:", 0, 0, &x1, &y1, &w, &h);
+    canvas.setCursor((canvas.width() - w) / 2, 110);
+    canvas.print("same WiFi network:");
     
     String ipText = "http://" + IP.toString();
     canvas.setTextColor(canvas.color565(255, 255, 100));
     canvas.getTextBounds(ipText.c_str(), 0, 0, &x1, &y1, &w, &h);
-    canvas.setCursor((canvas.width() - w) / 2, 200);
+    canvas.setCursor((canvas.width() - w) / 2, 150);
     canvas.print(ipText);
+    
+    canvas.setTextSize(1);
+    canvas.setTextColor(canvas.color565(150, 150, 150));
+    canvas.getTextBounds("Press B to cancel", 0, 0, &x1, &y1, &w, &h);
+    canvas.setCursor((canvas.width() - w) / 2, 200);
+    canvas.print("Press B to cancel");
     
     lilka::display.drawCanvas(&canvas);
     
-    // Wait for configuration
+    // Wait for configuration or cancel button
     while (!configServer.isDone()) {
         configServer.loop();
-        delay(10);
+        lilka::State state = lilka::controller.getState();
+        if (state.b.justPressed) {
+            return false; // Cancelled, return to main menu
+        }
     }
     
-    // Stop AP
-    WiFi.softAPdisconnect(true);
+    return true; // Settings saved, will restart
 }
 
 void runQuickSettingsMode() {

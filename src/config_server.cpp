@@ -1,8 +1,5 @@
 #include "config_server.h"
 
-const char* AP_SSID = "LilkaAI-AP";
-const char* AP_PASSWORD = "lilka2026";
-
 ConfigServer::ConfigServer(Settings* settings) {
     this->settings = settings;
     this->done = false;
@@ -10,10 +7,6 @@ ConfigServer::ConfigServer(Settings* settings) {
 }
 
 void ConfigServer::start() {
-    // Start Access Point
-    WiFi.softAP(AP_SSID, AP_PASSWORD);
-    IPAddress IP = WiFi.softAPIP();
-    
     // Setup web server routes
     server->on("/", [this]() { this->handleRoot(); });
     server->on("/save", HTTP_POST, [this]() { this->handleSave(); });
@@ -34,14 +27,10 @@ void ConfigServer::handleRoot() {
 }
 
 void ConfigServer::handleSave() {
-    if (server->hasArg("wifi_ssid") && server->hasArg("wifi_pass") && server->hasArg("openai_key") && server->hasArg("openai_model")) {
-        String ssid = server->arg("wifi_ssid");
-        String password = server->arg("wifi_pass");
+    if (server->hasArg("openai_key") && server->hasArg("openai_model")) {
         String apiKey = server->arg("openai_key");
         String model = server->arg("openai_model");
         
-        settings->setWifiSSID(ssid);
-        settings->setWifiPassword(password);
         settings->setOpenAIKey(apiKey);
         settings->setOpenAIModel(model);
         settings->setConfigured(true);
@@ -66,8 +55,6 @@ void ConfigServer::handleSave() {
 
 String ConfigServer::getConfigPage() {
     // Get current settings
-    String currentSSID = settings->getWifiSSID();
-    String currentPassword = settings->getWifiPassword();
     String currentAPIKey = settings->getOpenAIKey();
     String currentModel = settings->getOpenAIModel();
     
@@ -87,19 +74,12 @@ String ConfigServer::getConfigPage() {
     html += "border-radius:8px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:10px;}";
     html += "button:hover{background:#1565c0;}";
     html += ".info{background:#e3f2fd;padding:15px;border-radius:8px;margin-bottom:20px;font-size:14px;color:#1976d2;}";
+    html += ".wifi-info{background:#fff3cd;padding:15px;border-radius:8px;margin-bottom:20px;font-size:14px;color:#856404;}";
     html += "</style></head><body>";
     html += "<div class='container'>";
-    html += "<h1>🤖 Лілка AI Config</h1>";
-    html += "<div class='info'>Configure your WiFi and OpenAI credentials</div>";
+    html += "<h1>🤖 Lilka AI Config</h1>";
+    html += "<div class='info'>Configure your OpenAI credentials</div>";
     html += "<form action='/save' method='POST'>";
-    html += "<div class='form-group'>";
-    html += "<label>WiFi SSID:</label>";
-    html += "<input type='text' name='wifi_ssid' value='" + currentSSID + "' placeholder='Your WiFi network name' required>";
-    html += "</div>";
-    html += "<div class='form-group'>";
-    html += "<label>WiFi Password:</label>";
-    html += "<input type='password' name='wifi_pass' value='" + currentPassword + "' placeholder='Your WiFi password' required>";
-    html += "</div>";
     html += "<div class='form-group'>";
     html += "<label>OpenAI API Key:</label>";
     html += "<input type='text' name='openai_key' value='" + currentAPIKey + "' placeholder='sk-...' required>";
