@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // Keira WiFi namespace in NVS storage
-#define WIFI_NAMESPACE "kwifi"
+#define WIFI_NAMESPACE "network"
 
 // Hash SSID to create storage key (matches Keira's implementation)
 String hashSSID(String ssid);
