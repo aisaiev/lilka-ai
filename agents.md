@@ -25,7 +25,7 @@ This project provides OpenAI GPT integration for Lilka ESP32 dev board, enabling
 
 ## Architecture
 - **main.cpp**: Application entry, menu system, mode selection, Keira WiFi credential loading
-- **wifi_config**: Reads WiFi credentials from Keira's NVS storage (namespace "kwifi")
+- **wifi_config**: Reads WiFi credentials from Keira's NVS storage (namespace "network")
 - **openai_client**: HTTP client for OpenAI API with conversation history tracking
 - **ui_handler**: Display management with canvas-based rendering for flicker-free updates
 - **serial_handler**: RS-232 communication handler for terminal mode
@@ -40,7 +40,7 @@ This project provides OpenAI GPT integration for Lilka ESP32 dev board, enabling
 - (Optional) USB to Serial Adapter for development/debugging
 
 ## Configuration
-- WiFi: Automatically loaded from Keira OS NVS storage (namespace "kwifi")
+- WiFi: Automatically loaded from Keira OS NVS storage (namespace "network")
 - OpenAI: Web-based setup via WiFi
 - Settings stored in separate NVS namespace: OpenAI API Key, AI Model
 - Quick settings for runtime model changes
